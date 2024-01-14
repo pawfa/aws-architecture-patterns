@@ -1,1 +1,65 @@
-{}
+{
+  "api": {
+    "nextjsamplify": {
+      "dependsOn": [],
+      "output": {
+        "authConfig": {
+          "additionalAuthenticationProviders": [],
+          "defaultAuthentication": {
+            "apiKeyConfig": {
+              "apiKeyExpirationDays": 7
+            },
+            "authenticationType": "API_KEY"
+          }
+        }
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "AppSync"
+    }
+  },
+  "function": {
+    "nextjsamplify4f440d7a": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributeEnvMap": {
+            "Arn": "TABLE_ARN",
+            "Name": "TABLE_NAME"
+          },
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "storage",
+          "resourceName": "dynamoamplifydev"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_nextjsamplify4f440d7a_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextjsamplify4f440d7a"
+        }
+      ]
+    },
+    "AMPLIFY_function_nextjsamplify4f440d7a_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextjsamplify4f440d7a"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "dynamoamplifydev": {
+      "providerPlugin": "awscloudformation",
+      "service": "DynamoDB"
+    }
+  }
+}

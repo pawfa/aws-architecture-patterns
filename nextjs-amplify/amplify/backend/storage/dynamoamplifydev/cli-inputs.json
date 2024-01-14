@@ -1,0 +1,10 @@
+{
+  "resourceName": "dynamoamplifydev",
+  "tableName": "dynamoamplifydev",
+  "partitionKey": {
+    "fieldName": "id",
+    "fieldType": "string"
+  },
+  "gsi": [],
+  "triggerFunctions": []
+}
