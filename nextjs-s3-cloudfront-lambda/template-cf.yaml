@@ -23,3 +23,16 @@ Resources:
     Properties:
       CloudFrontOriginAccessIdentityConfig:
         Comment: "mycdn-access-identity"
+  NextApiGateway:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Description: Nextjs API Gateway
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  NextApiRootResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt NextApiGateway.RootResourceId
+      RestApiId: !Ref NextApiGateway
+      PathPart: '{proxy+}'
