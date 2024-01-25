@@ -16,23 +16,69 @@ Resources:
           - Id: MyCDN
             DomainName: !GetAtt NextBucket.RegionalDomainName
             S3OriginConfig:
-              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${NextCloudFrontOAI}
-    DependsOn: NextBucket
-  NextCloudFrontOAI:
-    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt NextCloudFrontOAC.Id
+          - Id: NextBackend
+            DomainName: !Sub '${NextApiGateway}.execute-api.${AWS::Region}.amazonaws.com'
+            OriginPath: '/dev'
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+    DependsOn:
+      - NextBucket
+      - NextApiGateway
+  NextCloudFrontOAC:
+    Type: 'AWS::CloudFront::OriginAccessControl'
     Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: "mycdn-access-identity"
+      OriginAccessControlConfig:
+        Name: "mycdn-access-identity"
+        OriginAccessControlOriginType: s3
   NextApiGateway:
     Type: 'AWS::ApiGateway::RestApi'
     Properties:
       Description: Nextjs API Gateway
+      Name: NextjsApiGateway
       EndpointConfiguration:
         Types:
           - REGIONAL
-  NextApiRootResource:
-    Type: 'AWS::ApiGateway::Resource'
+  NextApiMethod:
+    Type: 'AWS::ApiGateway::Method'
     Properties:
-      ParentId: !GetAtt NextApiGateway.RootResourceId
+      HttpMethod: ANY
+      ResourceId: !GetAtt NextApiGateway.RootResourceId
       RestApiId: !Ref NextApiGateway
-      PathPart: '{proxy+}'
+      AuthorizationType: NONE
+      Integration:
+        Credentials: !GetAtt NextApiGatewayS3ProxyRole.Arn
+        IntegrationHttpMethod: ANY
+        Type: AWS
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:s3:path/${NextBucket}'
+  NextApiDeployment:
+    DependsOn:
+      - NextApiMethod
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref NextApiGateway
+      StageName: dev
+  NextApiGatewayS3ProxyRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: s3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub 'arn:aws:s3:::${NextBucket}'
+                  - !Sub 'arn:aws:s3:::${NextBucket}/*'
