@@ -32,6 +32,8 @@ Resources:
       OriginAccessControlConfig:
         Name: "mycdn-access-identity"
         OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
   NextApiGateway:
     Type: 'AWS::ApiGateway::RestApi'
     Properties:
@@ -48,10 +50,10 @@ Resources:
       RestApiId: !Ref NextApiGateway
       AuthorizationType: NONE
       Integration:
-        Credentials: !GetAtt NextApiGatewayS3ProxyRole.Arn
         IntegrationHttpMethod: ANY
-        Type: AWS
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:s3:path/${NextBucket}'
+        Type: AWS_PROXY
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NextLambda.Arn}/invocations
   NextApiDeployment:
     DependsOn:
       - NextApiMethod
@@ -59,7 +61,21 @@ Resources:
     Properties:
       RestApiId: !Ref NextApiGateway
       StageName: dev
-  NextApiGatewayS3ProxyRole:
+  NextLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Runtime: nodejs18.x
+      Role: !GetAtt NextLambdaExecutionRole.Arn
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async function(event) {
+            return "hello world";
+          };
+      Description: Lambda running Nextjs
+      TracingConfig:
+        Mode: Active
+  NextLambdaExecutionRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -68,17 +84,23 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-                - apigateway.amazonaws.com
+                - lambda.amazonaws.com
             Action:
               - sts:AssumeRole
+      Path: "/"
       Policies:
-        - PolicyName: s3
+        - PolicyName: root
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
-                  - s3:GetObject
-                Resource:
-                  - !Sub 'arn:aws:s3:::${NextBucket}'
-                  - !Sub 'arn:aws:s3:::${NextBucket}/*'
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+  NextLambdaApiGatewayInvoke:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref NextLambda
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${NextApiGateway}/*
