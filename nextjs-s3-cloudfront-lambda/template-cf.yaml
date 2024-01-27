@@ -3,13 +3,37 @@ Resources:
   NextBucket:
     Type: 'AWS::S3::Bucket'
     Properties: {}
+  NextBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref NextBucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:GetObject
+            Effect: Allow
+            Resource: !Sub ${NextBucket.Arn}/*
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${NextCloudFrontDistribution}
   NextCloudFrontDistribution:
     Type: 'AWS::CloudFront::Distribution'
     Properties:
       DistributionConfig:
+        CacheBehaviors:
+          - PathPattern: api/*
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - POST
+            TargetOriginId: NextBackend
+            ViewerProtocolPolicy: allow-all
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
         DefaultCacheBehavior:
           TargetOriginId: MyCDN
-          ViewerProtocolPolicy: 'https-only'
+          ViewerProtocolPolicy: 'redirect-to-https'
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
         Enabled: true
         Origins:
@@ -75,7 +99,7 @@ Resources:
       Description: Lambda running Nextjs
       TracingConfig:
         Mode: Active
-  NextLambdaExecutionRole:
+  NextLambdaExecutionRole:                            # https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
