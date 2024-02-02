@@ -3,6 +3,9 @@ Resources:
   NextBucket:
     Type: 'AWS::S3::Bucket'
     Properties: {}
+  NextBucketForLambdas:
+    Type: 'AWS::S3::Bucket'
+    Properties: {}
   NextBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -27,7 +30,6 @@ Resources:
               - GET
               - HEAD
               - OPTIONS
-              - POST
             TargetOriginId: NextBackend
             ViewerProtocolPolicy: allow-all
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
@@ -92,10 +94,8 @@ Resources:
       Role: !GetAtt NextLambdaExecutionRole.Arn
       Handler: index.handler
       Code:
-        ZipFile: |
-          exports.handler = async function(event) {
-            return "hello world";
-          };
+        S3Bucket: !Ref NextBucketForLambdas
+        S3Key: lambda.zip
       Description: Lambda running Nextjs
       TracingConfig:
         Mode: Active
@@ -128,3 +128,10 @@ Resources:
       FunctionName: !Ref NextLambda
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${NextApiGateway}/*
+Outputs:
+  NextBucketName:
+    Value: !Ref NextBucket
+    Description: Name of S3 bucket to hold static content
+  NextLambdaName:
+    Value: !Ref NextLambda
+    Description: Name of Lambda which will execute Nextjs
