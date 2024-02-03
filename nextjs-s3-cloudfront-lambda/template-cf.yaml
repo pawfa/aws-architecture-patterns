@@ -3,9 +3,6 @@ Resources:
   NextBucket:
     Type: 'AWS::S3::Bucket'
     Properties: {}
-  NextBucketForLambdas:
-    Type: 'AWS::S3::Bucket'
-    Properties: {}
   NextBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -92,10 +89,15 @@ Resources:
     Properties:
       Runtime: nodejs18.x
       Role: !GetAtt NextLambdaExecutionRole.Arn
-      Handler: index.handler
+      Handler: run.sh
       Code:
-        S3Bucket: !Ref NextBucketForLambdas
+        S3Bucket: nextjs-lambda-1234
         S3Key: lambda.zip
+      Layers:
+        - !Sub 'arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:3'
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
       Description: Lambda running Nextjs
       TracingConfig:
         Mode: Active
